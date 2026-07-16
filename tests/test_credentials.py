@@ -14,7 +14,9 @@ from agentcli import AppSpec, Credentials
 from agentcli import credentials as credmod
 
 OP = AppSpec(name="op-cli", env_prefix="OPCLI")
-DRONE = AppSpec(name="drone-cli", env_prefix="DRONECLI")
+# Drone wraps a product whose users already export DRONE_TOKEN (the official Go
+# CLI uses it), so we honour it as an alias behind our own name.
+DRONE = AppSpec(name="drone-cli", env_prefix="DRONECLI", token_env_aliases=("DRONE_TOKEN",))
 
 
 @pytest.fixture(autouse=True)
@@ -25,6 +27,57 @@ def _hermetic(monkeypatch, tmp_path):
     monkeypatch.setenv("DRONECLI_CONFIG_DIR", str(tmp_path / "drone"))
     monkeypatch.delenv("OPCLI_TOKEN", raising=False)
     monkeypatch.delenv("DRONECLI_TOKEN", raising=False)
+    monkeypatch.delenv("DRONE_TOKEN", raising=False)
+
+
+# ---- ecosystem token aliases (DRONE_TOKEN, JIRA_API_TOKEN, …) --------
+
+def test_alias_env_var_is_honoured(monkeypatch):
+    """A user who already exports DRONE_TOKEN should just work."""
+    monkeypatch.setenv("DRONE_TOKEN", "from-drone-token")
+    assert Credentials(DRONE).get_token("default") == "from-drone-token"
+    assert "$DRONE_TOKEN" in Credentials(DRONE).backend_name()
+
+
+def test_our_own_name_beats_the_alias(monkeypatch):
+    """The more specific name is the more deliberate one."""
+    monkeypatch.setenv("DRONE_TOKEN", "ecosystem")
+    monkeypatch.setenv("DRONECLI_TOKEN", "ours")
+    assert Credentials(DRONE).get_token("default") == "ours"
+    assert "$DRONECLI_TOKEN" in Credentials(DRONE).backend_name()
+
+
+def test_alias_overrides_the_keyring_and_says_so(monkeypatch):
+    """The documented hazard: env beats a keyring login, silently.
+
+    We do not invert the precedence (CI depends on env winning) — but
+    backend_name() must name the variable that actually spoke, or the operator
+    is left debugging "why is it using the wrong account?".
+    """
+    c = Credentials(DRONE)
+    c.store_token("default", "from-keyring")
+    monkeypatch.setenv("DRONE_TOKEN", "from-env")
+    assert c.get_token("default") == "from-env"
+    assert c.backend_name() == "environment variable $DRONE_TOKEN"
+
+
+def test_tools_without_aliases_ignore_foreign_vars(monkeypatch):
+    """op-cli declares no aliases, so DRONE_TOKEN must mean nothing to it."""
+    monkeypatch.setenv("DRONE_TOKEN", "not-mine")
+    assert Credentials(OP).get_token("default") is None
+
+
+def test_token_env_names_order():
+    assert DRONE.token_env_names() == ("DRONECLI_TOKEN", "DRONE_TOKEN")
+    assert OP.token_env_names() == ("OPCLI_TOKEN",)
+
+
+def test_empty_env_var_is_not_a_token(monkeypatch):
+    """`export DRONE_TOKEN=` must fall through, not authenticate as ""."""
+    monkeypatch.setenv("DRONE_TOKEN", "")
+    c = Credentials(DRONE)
+    c.store_token("default", "from-keyring")
+    assert c.get_token("default") == "from-keyring"
 
 
 def test_env_token_wins_over_everything(monkeypatch):

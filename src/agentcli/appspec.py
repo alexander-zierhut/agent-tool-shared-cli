@@ -39,6 +39,20 @@ class AppSpec:
     env_prefix: str
     """Env-var namespace WITHOUT the trailing underscore, e.g. ``OPCLI``."""
 
+    token_env_aliases: tuple[str, ...] = ()
+    """Extra token env vars to honour, in order, AFTER ``<PREFIX>_TOKEN``.
+
+    For wrapping a product that already has an established variable its users
+    export — Drone's ``DRONE_TOKEN``, Jira's ``JIRA_API_TOKEN``, GitLab's
+    ``GITLAB_TOKEN``. Adopting the ecosystem's name is worth more than prefix
+    purity: people (and their CI) already have it set.
+
+    Ours wins when both are present — the more specific name is the more
+    deliberate one. Note the hazard this creates and surface it in `auth status`:
+    an exported alias **silently overrides a keyring login**, and for Drone the
+    ``DRONE_*`` namespace is also what the runner injects into every build step.
+    """
+
     def __post_init__(self) -> None:
         # These two are the whole contract; a typo here silently relocates a
         # user's config or splits their token from their profile.
@@ -58,6 +72,10 @@ class AppSpec:
     def env(self, suffix: str) -> str:
         """The full env-var name for *suffix*: ``env("TOKEN") -> "OPCLI_TOKEN"``."""
         return f"{self.env_prefix}_{suffix}"
+
+    def token_env_names(self) -> tuple[str, ...]:
+        """Every token env var this tool honours, in precedence order."""
+        return (self.env("TOKEN"), *self.token_env_aliases)
 
     def getenv(self, suffix: str, default: str | None = None) -> str | None:
         """Read ``<PREFIX>_<SUFFIX>`` from the environment."""

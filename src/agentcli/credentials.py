@@ -52,7 +52,23 @@ class Credentials:
 
     @property
     def env_token(self) -> str:
+        """The canonical token env var. See :meth:`_env_token_hit` for aliases."""
         return self.spec.env("TOKEN")
+
+    def _env_token_hit(self) -> tuple[str, str] | None:
+        """The first token env var that is set, as ``(name, value)``.
+
+        Checks ``<PREFIX>_TOKEN`` first, then any ecosystem aliases in order.
+        Returns the NAME as well as the value, because an operator who logged in
+        via the keyring and is unknowingly being overridden by an exported
+        variable needs to be told exactly which one — "it works on my machine"
+        lives here.
+        """
+        for name in self.spec.token_env_names():
+            val = os.environ.get(name)
+            if val:
+                return name, val
+        return None
 
     def _fallback_file(self) -> Path:
         return self.spec.credentials_file()
@@ -83,8 +99,9 @@ class Credentials:
 
     def backend_name(self) -> str:
         """Human-readable name of the active secret backend (for `auth status`)."""
-        if os.environ.get(self.env_token):
-            return f"environment variable ${self.env_token}"
+        hit = self._env_token_hit()
+        if hit:
+            return f"environment variable ${hit[0]}"
         if _keyring_available():
             try:
                 import keyring
@@ -115,10 +132,17 @@ class Credentials:
         return "file"
 
     def get_token(self, profile: str) -> str | None:
-        """Resolve the token for *profile*, honouring the env override first."""
-        env = os.environ.get(self.env_token)
-        if env:
-            return env
+        """Resolve the token for *profile*, honouring the env override first.
+
+        Precedence is **env > keyring > file**, deliberately: it is what lets a
+        tool run non-interactively in CI without touching a keyring that isn't
+        there. Do not invert it — but do surface it (`backend_name`), because an
+        exported variable silently beating a keyring login is confusing exactly
+        when you can least afford it.
+        """
+        hit = self._env_token_hit()
+        if hit:
+            return hit[1]
         if _keyring_available():
             try:
                 import keyring
