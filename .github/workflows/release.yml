@@ -41,6 +41,12 @@ jobs:
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          # Re-running a release (to fix a failed per-platform job, say) must not
+          # die on "File already exists" for a version that published fine. A red
+          # release for an already-correct artifact trains people to ignore red.
+          # A forgotten version bump is still caught by the tag-vs-built guard above.
+          skip-existing: true
 
       - name: Attach dists to the release
         if: startsWith(github.ref, 'refs/tags/v')
