@@ -1,0 +1,75 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch: {}
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # The whole suite is hermetic — no network, no services. It should stay that way:
+  # this package is the contract, and the contract must be testable in isolation.
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.10", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: pip install -e '.[test]'
+      - run: python -m pytest -q
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install build
+      - name: Build wheel + sdist
+        run: |
+          python -m build
+          ls -l dist
+      - name: Install the wheel in a clean venv and smoke-test the contract
+        run: |
+          python -m venv /tmp/clean
+          /tmp/clean/bin/pip install dist/*.whl
+          /tmp/clean/bin/python - <<'PY'
+          from agentcli import AppSpec, Credentials, Emitter, OutputFormat, NotFoundError
+          assert NotFoundError("x").exit_code == 5
+          s = AppSpec(name="probe-cli", env_prefix="PROBE")
+          assert s.env("TOKEN") == "PROBE_TOKEN"
+          Emitter(OutputFormat.json).emit({"ok": True})
+          print("wheel OK")
+          PY
+
+  # The downstream contract check: does the real consumer still pass against this
+  # working tree? Catches a breaking change here before it reaches a release.
+  downstream:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: shared
+      - uses: actions/checkout@v4
+        with:
+          repository: alexander-zierhut/agent-tool-openproject-cli
+          path: openproject
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install openproject against THIS shared tree
+        run: |
+          pip install -e ./shared
+          pip install -e './openproject[test]'
+      - name: Run openproject's hermetic suite
+        run: cd openproject && python -m pytest -m "not integration" -q
