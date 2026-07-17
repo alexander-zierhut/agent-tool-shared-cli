@@ -38,7 +38,7 @@ from .errors import (
 )
 from .output import Emitter, OutputFormat, print_error  # NDJSON is Emitter.stream_json()
 
-__version__ = "0.1.1"
+__version__ = "0.1.2"
 
 __all__ = [
     "AppSpec",
