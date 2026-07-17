@@ -18,8 +18,40 @@ from typing import Any, Callable, Iterable, Sequence
 from rich.console import Console
 from rich.table import Table
 
-# A column is (header, accessor). accessor is a dict key or a callable(row)->value.
-Column = tuple[str, "str | Callable[[dict], Any]"]
+# A column is (header, accessor) — accessor is a dict key or a callable(row)->value —
+# or just a bare string, which means "use this key, and title-case nothing".
+#
+# Bare strings are accepted because they are what everyone reaches for, and the
+# type alias alone did not stop them: three of Drone's command modules pass
+# `columns=["number", "status", …]`, and every one of them raised
+# `ValueError: too many values to unpack` under `-o table`, `-o csv` and
+# `-o markdown` while working fine under the default json. Nothing caught it —
+# json is the default, so the crash only ever reached a human who asked for a
+# table, and the tests only exercised the argv layer above this one.
+#
+# The lesson is the same as the reserved-flags bug: an API that is easy to hold
+# wrong will be held wrong. Widening the input here fixes every caller in the
+# family at once and cannot break a correct one.
+Column = "str | tuple[str, str | Callable[[dict], Any]]"
+
+
+def _normalise_columns(columns: Sequence[Any] | None) -> list[tuple[str, Any]] | None:
+    """Accept bare strings alongside (header, accessor) pairs.
+
+    Done once, at the entry point, rather than at each of the three unpack sites:
+    a normaliser per format is three chances to miss one, and the one missed is
+    whichever format nobody tried.
+    """
+    if columns is None:
+        return None
+    out: list[tuple[str, Any]] = []
+    for col in columns:
+        if isinstance(col, str):
+            out.append((col, col))
+        else:
+            header, accessor = col  # a 2-tuple; anything else is a real bug worth raising on
+            out.append((header, accessor))
+    return out
 
 _err_console = Console(stderr=True)
 
@@ -90,6 +122,8 @@ class Emitter:
         title: str | None = None,
         empty: str = "(no results)",
     ) -> None:
+        columns = _normalise_columns(columns)
+
         if self.fields:
             # --fields overrides both the JSON shape and the table/markdown columns
             if self.fmt == OutputFormat.json:

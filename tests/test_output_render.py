@@ -185,3 +185,50 @@ def test_stream_json(capsys):
 def test_stream_json_honours_fields(capsys):
     Emitter(OutputFormat.json, fields=["id"]).stream_json([{"id": 1, "x": 9}])
     assert json.loads(capsys.readouterr().out.strip()) == {"id": 1}
+
+
+# ---- bare-string columns (regression: the -o table crash) -------------
+
+def test_bare_string_columns_are_accepted_in_every_format():
+    """Three of Drone's command modules pass `columns=["number", "status"]`, and
+    every one raised `ValueError: too many values to unpack` under table/csv/
+    markdown while working fine under json. json is the default, so the crash only
+    ever reached a human who asked for a table -- and Drone's only `-o table` test
+    exercised the argv parser, one layer above this code.
+
+    Two independent implementers hit it on the same afternoon, which is the real
+    argument: an API that is easy to hold wrong will be held wrong. Loop over every
+    format because the bug was format-specific -- testing one proves nothing about
+    the other two.
+    """
+    data = [{"number": 1, "status": "success"}]
+    for fmt in (OutputFormat.table, OutputFormat.csv, OutputFormat.markdown, OutputFormat.json):
+        Emitter(fmt, color=False).emit(data, columns=["number", "status"])
+
+
+def test_bare_and_tuple_columns_may_be_mixed():
+    Emitter(OutputFormat.table, color=False).emit(
+        [{"number": 1, "status": "success"}], columns=["number", ("State", "status")]
+    )
+
+
+def test_a_bare_string_column_uses_the_key_as_its_header(capsys):
+    Emitter(OutputFormat.csv, color=False).emit([{"number": 1}], columns=["number"])
+    assert capsys.readouterr().out.splitlines()[0] == "number"
+
+
+def test_bare_string_columns_still_read_the_right_values(capsys):
+    """Guard against a 'fix' that accepts the input and then renders empty cells."""
+    Emitter(OutputFormat.csv, color=False).emit(ROWS, columns=["id", "name"])
+    out = capsys.readouterr().out.splitlines()
+    assert out[0] == "id,name"
+    assert out[1] == "1,alpha"
+
+
+def test_normalise_columns():
+    from agentcli.output import _normalise_columns
+
+    assert _normalise_columns(None) is None
+    assert _normalise_columns(["a"]) == [("a", "a")]
+    assert _normalise_columns([("A", "a")]) == [("A", "a")]
+    assert _normalise_columns(["a", ("B", "b")]) == [("a", "a"), ("B", "b")]
