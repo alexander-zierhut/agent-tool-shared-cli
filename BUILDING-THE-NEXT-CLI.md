@@ -111,3 +111,28 @@ PATH collisions with the vendor's own tools.
 (API map, VERIFIED/LIVE_FINDINGS, response examples, reference impls). Memory index:
 `MEMORY.md` → killer-feature-principle, testing-against-live, per-tool project +
 gotchas. lexware has the richest spike (no live instance → captured everything).
+
+## Orchestration (how the work got done efficiently)
+- **Scout inline, THEN fan out.** Discover the work-list yourself (list endpoints,
+  read the docs, boot a probe), then Workflow-pipeline over it. Don't fan out before
+  you know the shape.
+- **Orchestrator owns the coherence anchors** — cli.py, the chassis, the shared model
+  (e.g. mock `voucher.js`), the review. Agents own leaf modules + their tests, with
+  explicit file ownership so they never collide.
+- **Transient agent failures (safety-classifier "Stage 2" errors) are common and
+  retryable** — resume the workflow (`resumeFromRunId`): completed agents replay from
+  cache, only the failed ones re-run. Happened ~3× this session; retry always worked.
+- **Verify agent output, don't trust it:** run the tests they claim green; when the
+  claim is about API behavior, check it live. Two agents gave opposite envelope
+  answers — the sandbox settled it.
+- Capture verbatim responses via a fan-out when there's no live instance (lexware's
+  6-agent doc-scrape → `spike/research/*.md`, 66 examples = the fixture corpus).
+
+## Open items handed forward (state, not lessons)
+- lexware mock: **npm publish needs an `NPM_TOKEN` secret** (GHCR Docker + PyPI CLI
+  are LIVE at v0.1.0). npm judged optional — Docker is the real channel.
+- lexware: ~9 of 20 endpoints are mock+docs-verified but NOT live-confirmed against
+  the sandbox (esp. voucherlist `voucherType` filter values for non-invoice docs).
+- Sandbox key is temporary/manually-provisioned; in gitignored `lexware/.env`.
+- Full project state is in memory: `lexware-cli-project`, `lexware-ratelimit-retry`,
+  `agent-tool-testing-against-live`, `agent-tool-killer-feature-principle`.
