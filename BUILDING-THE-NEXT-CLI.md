@@ -4,6 +4,23 @@ Companion to `BLUEPRINT.md` (the standard). This is the hard-won, less-obvious
 stuff, distilled after openproject · drone · grafana · **lexware-office** + the
 **lexware-office-api-mock**. Read this first for a new tool.
 
+## Similarity is the product (read this first)
+
+The family only pays off if the tools are **interchangeable to the reader**. An
+agent that learned `drone-cli` should drive `lexware-office` with zero relearning:
+same flags in the same places, same JSON-on-stdout / JSON-error-on-stderr contract,
+same exit-code meanings, same repo layout, same README frame, same auto-generated
+`docs/COMMANDS.md`. Divergence is a tax paid by every future reader, human or model.
+
+So the rule is: **standardize the frame, keep only the body tool-specific.** The
+frame = repo scaffolding, README chrome, the global flags, the output/exit-code
+contract, pyproject metadata. The body = the domain commands, the killer feature,
+and the transport (`client.py`), which is *never* shared because it inverts per API.
+
+Before shipping a new tool, run it through **[SIMILARITY_CHECKLIST.md](SIMILARITY_CHECKLIST.md)**
+— every box is something a sibling already does. Tick them all, or record on the
+checklist's "Allowed differences" list *why* this tool is the deliberate exception.
+
 ## The shape (unchanged, proven 5×)
 Chassis on `agent-tool-shared-cli` (import `agentcli`, PyPI **0.1.2**): `spec.py`
 (`AppSpec(name, env_prefix, token_env_aliases)` + `credentials`), `errors.py`

@@ -1,17 +1,36 @@
 # agent-tool-shared-cli
 
-The shared chassis for the **`agent-tool-<x>-cli`** family — agent-ready command-line
-tools that an LLM can drive with no prior knowledge of them.
+> The shared chassis for the **`agent-tool-<x>-cli`** family — agent-ready
+> command-line tools that an LLM can drive with no prior knowledge of them.
 
-Consumers: [`agent-tool-openproject-cli`](https://github.com/alexander-zierhut/agent-tool-openproject-cli),
-`agent-tool-drone-cli` (in progress).
-
-This repo also holds **[BLUEPRINT.md](BLUEPRINT.md)** — the engineering standard the
-whole family is built to. Read that first if you are standing up a new tool.
+[![PyPI](https://img.shields.io/pypi/v/agent-tool-shared-cli)](https://pypi.org/project/agent-tool-shared-cli/)
+[![CI](https://github.com/alexander-zierhut/agent-tool-shared-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/alexander-zierhut/agent-tool-shared-cli/actions/workflows/ci.yml)
+![Python](https://img.shields.io/pypi/pyversions/agent-tool-shared-cli)
+![License: MIT](https://img.shields.io/badge/license-MIT-green)
 
 ```bash
 pip install agent-tool-shared-cli
 ```
+
+**The tools built on it** — each learns the same contract, so an agent that knows
+one knows them all:
+
+| Tool | Install | For |
+| --- | --- | --- |
+| [**drone-cli**](https://github.com/alexander-zierhut/agent-tool-drone-cli) | `pipx install agent-tool-drone-cli` | Drone CI — builds, failing-step logs, promotions |
+| [**grafana-cli**](https://github.com/alexander-zierhut/agent-tool-grafana-cli) | `pipx install agent-tool-grafana-cli` | Grafana — log discovery, health scan, alert routing |
+| [**openproject**](https://github.com/alexander-zierhut/agent-tool-openproject-cli) | `pipx install agent-tool-openproject-cli` | OpenProject — work packages, time, invoicing |
+| [**lexware-office**](https://github.com/alexander-zierhut/agent-tool-lexware-office-cli) | `pipx install agent-tool-lexware-office-cli` | Lexware Office — invoices, contacts, AR-aging |
+
+This repo also holds the family's engineering docs — read these first if you are
+standing up a new tool:
+
+- **[BLUEPRINT.md](BLUEPRINT.md)** — the engineering standard the whole family is built to.
+- **[BUILDING-THE-NEXT-CLI.md](BUILDING-THE-NEXT-CLI.md)** — the distilled playbook, and *why similarity is the product*.
+- **[SIMILARITY_CHECKLIST.md](SIMILARITY_CHECKLIST.md)** — tick every box before a new CLI is "done", so it lands already looking like its siblings.
+
+**Keywords:** agent CLI chassis, LLM tool contract, exit-code taxonomy, JSON output
+CLI, keyring credentials, Python CLI library, AI agent tooling, Claude.
 
 ## What's in it
 
@@ -92,4 +111,4 @@ Changes here affect every downstream CLI. Two rules:
 
 ## License
 
-MIT
+MIT — see [LICENSE](LICENSE).

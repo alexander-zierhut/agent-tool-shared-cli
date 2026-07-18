@@ -38,6 +38,7 @@ test = [
 Homepage = "https://github.com/alexander-zierhut/agent-tool-shared-cli"
 Repository = "https://github.com/alexander-zierhut/agent-tool-shared-cli"
 Issues = "https://github.com/alexander-zierhut/agent-tool-shared-cli/issues"
+Changelog = "https://github.com/alexander-zierhut/agent-tool-shared-cli/releases"
 
 # No [project.scripts]: this is a library, not a command.
 
