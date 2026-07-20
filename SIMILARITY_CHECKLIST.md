@@ -17,6 +17,9 @@ Reference implementations, freshest first: `grafana/`, `drone/`, `openproject/`,
 - [ ] `README.md` — follows the shared chrome (see §2).
 - [ ] `AGENTS.md` — the machine contract, titled `# Using \`<cmd>\` from an AI agent`
       (drone/openproject/lexware style). Opens by pointing at `<cmd> guide`.
+- [ ] `AGENTS.md` ends with a `## Reporting a problem — open a GitHub issue`
+      section (identical wording across the family; only the repo slug and `<cmd>`
+      differ) so an agent can file an issue on the right repo when the user asks.
 - [ ] `LICENSE` — MIT, `Copyright (c) <year> Zierhut IT / Alexander Zierhut`
       (verbatim from any sibling).
 - [ ] `Makefile` — targets `help install test test-unit lint docs clean` (plus any
@@ -65,9 +68,14 @@ Reference implementations, freshest first: `grafana/`, `drone/`, `openproject/`,
       `--dry-run`, `--stream`, `--no-context`. Root-only (before the subcommand):
       `--profile/-p`, `--no-color`, `--version/-V`.
 - [ ] No command declares one of the popped global names as its own option.
-- [ ] Ships these command groups: `guide`, `auth`, `context`, `settings`, `install`,
-      `raw`. Plus the domain groups.
+- [ ] Ships these command groups: `guide`, `report`, `auth`, `context`, `settings`,
+      `install`, `raw`. Plus the domain groups.
 - [ ] `<cmd> guide` works with **no config, no token, no network**.
+- [ ] `<cmd> report` works with **no config, no token, no network** — it prints
+      `agentcli.build_report(SPEC, __version__)`: the repo, a pre-filled
+      `issues/new` link and a `gh` one-liner. Requires `AppSpec(..., repo="owner/name")`.
+      This is how an installed binary (no README/AGENTS.md beside it) tells a user
+      where to file. Add `report` to the meta/no-prompt set in the root callback.
 - [ ] Root help description matches the family voice: *"Agent-friendly CLI for
       <Product>: …"* + the JSON/stderr output note + a "New here? run `<cmd> guide`"
       pointer.

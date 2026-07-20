@@ -53,6 +53,16 @@ class AppSpec:
     ``DRONE_*`` namespace is also what the runner injects into every build step.
     """
 
+    repo: str = ""
+    """GitHub ``owner/name`` slug for THIS tool, e.g. ``alexander-zierhut/agent-tool-drone-cli``.
+
+    Carried here because it is part of the **contract**, not the transport: once
+    installed there is no README or ``AGENTS.md`` beside the binary, so the tool
+    itself must be able to say where a problem gets reported (``<cmd> report``).
+    Empty means "not published yet" — the report command still runs, it just has
+    no link to hand out.
+    """
+
     def __post_init__(self) -> None:
         # These two are the whole contract; a typo here silently relocates a
         # user's config or splits their token from their profile.
@@ -65,6 +75,11 @@ class AppSpec:
         if self.env_prefix.endswith("_"):
             raise ValueError(
                 f"AppSpec.env_prefix must not end with '_' (it is added for you), got {self.env_prefix!r}"
+            )
+        # A typo here sends bug reports into the void; catch the obvious shape error.
+        if self.repo and self.repo.count("/") != 1:
+            raise ValueError(
+                f"AppSpec.repo must be a bare 'owner/name' slug, got {self.repo!r}"
             )
 
     # ---- env ---------------------------------------------------------
@@ -112,3 +127,28 @@ class AppSpec:
     @property
     def keyring_service(self) -> str:
         return self.name
+
+    # ---- issue reporting (the contract, carried in the binary) -------
+
+    def repo_url(self) -> str:
+        """``https://github.com/<owner>/<name>`` — empty string if no repo is set."""
+        return f"https://github.com/{self.repo}" if self.repo else ""
+
+    def issues_url(self) -> str:
+        """The issue tracker for this tool."""
+        return f"{self.repo_url()}/issues" if self.repo else ""
+
+    def new_issue_url(self, *, title: str | None = None, body: str | None = None) -> str:
+        """A GitHub ``issues/new`` link, optionally pre-filling title and body.
+
+        No token or account is needed to *open* the form (GitHub asks the human
+        to sign in only at submit), so this is the token-free path an installed
+        binary can always offer.
+        """
+        if not self.repo:
+            return ""
+        from urllib.parse import urlencode
+
+        base = f"{self.repo_url()}/issues/new"
+        query = {k: v for k, v in (("title", title), ("body", body)) if v}
+        return f"{base}?{urlencode(query)}" if query else base

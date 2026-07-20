@@ -37,14 +37,16 @@ from .errors import (
     ValidationError,
 )
 from .output import Emitter, OutputFormat, print_error  # NDJSON is Emitter.stream_json()
+from .report import build_report
 
-__version__ = "0.1.3"
+__version__ = "0.1.4"
 
 __all__ = [
     "AppSpec",
     "Credentials",
     "Emitter",
     "OutputFormat",
+    "build_report",
     "print_error",
     "OpError",
     "ApiError",
